@@ -29,7 +29,6 @@ import (
 
 var filePath string
 var doneAt string
-var layoutISO = "2006-01-02"
 
 // doCmd represents the do command
 var doCmd = &cobra.Command{
@@ -97,13 +96,17 @@ to quickly create a Cobra application.`,
 
 		fmt.Printf("You have marked as done %q\n", result)
 		question := questions[idx]
-		question.Do(sp.Intervals)
-			// parsed, err := time.Parse(layoutISO, doneAt)
-			// if err != nil {
-			// 	fmt.Println(err)
-			// 	os.Exit(1)
-			// }
-			// question.DoAt(parsed, sp.Intervals)	
+		if startDate == "" {
+			question.Do(sp.Intervals)
+		} else {
+			parsed, err := time.Parse(plan.ISOLayout, doneAt)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			question.DoAt(parsed, sp.Intervals)	
+		}
+			
 		out, err := json.Marshal(sp)
 		if err != nil {
 			fmt.Println("error marshalling questions", err)
@@ -124,5 +127,5 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	doCmd.Flags().StringVarP(&filePath, "questions", "q", "questions.json", "path to the questions file")
+	doCmd.Flags().StringVarP(&filePath, "plan", "p", "examples/plan.json", "path to the study plan json file")
 }

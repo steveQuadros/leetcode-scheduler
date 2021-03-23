@@ -20,7 +20,7 @@ func New(intervals []int, startDate time.Time, questionsPerDay int) *StudyPlan {
 	}
 }
 
-func (sp *StudyPlan) Schedule(questions []*Question) []*Question {
+func (sp *StudyPlan) Schedule(questions []*Question) {
 	// sort by difficult
 	var Difficulty = map[string]int{
 		"Easy": 1,
@@ -42,7 +42,7 @@ func (sp *StudyPlan) Schedule(questions []*Question) []*Question {
 		count++
 		question.Schedule(curDate, sp.Intervals)
 	}
-	return questions	
+	sp.Questions = questions	
 }
 
 type Plan struct {

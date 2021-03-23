@@ -19,18 +19,19 @@ import (
 	"fmt"
 	"encoding/json"
 	"time"
-	"encoding/csv"
 	"os"
-	"io"
 	"github.com/spf13/cobra"
 	"github.com/stevequadros/studyplan/plan"
 )
 
 var outputAsPlan bool
+var intervals []int
+var startDate string
+var questionsPerDay int
 
 // genCmd represents the gen command
-var genCmd = &cobra.Command{
-	Use:   "gen",
+var planCmd = &cobra.Command{
+	Use:   "plan",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -39,23 +40,16 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var intervals = []int{2,4,8,16}
-		var startDate = time.Now()
-		var questionsPerDay = 3
-
-		c := csv.NewReader(os.Stdin)
-		// skip header
-		_, err := c.Read()
-		if err != nil {
-			panic(err)
-		}
-		
+		d := json.NewDecoder(os.Stdin)
+		d.Token()
 		var questions []*plan.Question
-		for line, err := c.Read(); err != io.EOF; line, err = c.Read() {
-			if err != nil {
-				panic(err)
+		for d.More() {
+			q := &plan.Question{}
+			if err := d.Decode(q); err != nil {
+				fmt.Println("error decoding; ", err)
+				os.Exit(1)
 			}
-			questions = append(questions, &plan.Question{Title: line[0], Link: line[1], Difficulty: line[2]})
+			questions = append(questions, q)
 		}
 
 		if len(questions) < 1 {
@@ -63,8 +57,16 @@ to quickly create a Cobra application.`,
 			return
 		}
 
-		plan := plan.New(intervals, startDate, questionsPerDay)
+		var startTime time.Time
+		var err error
+		startTime, err = time.Parse(plan.ISOLayout, startDate)
+		if err != nil {
+			fmt.Println("err parsing time: ", err)
+			os.Exit(1)
+		}
+		plan := plan.New(intervals, startTime, questionsPerDay)
 		plan.Schedule(questions)
+
 		var out []byte
 		if outputAsPlan {
 			// plans := plan.ByDate(plan.questions)
@@ -72,11 +74,11 @@ to quickly create a Cobra application.`,
 			// if err != nil {
 			// 	panic(err)
 			// }
-			
 		} else {
-			out, err = json.Marshal(plan.Questions)
+			out, err = json.Marshal(plan)
 			if err != nil {
-				panic(err)
+				fmt.Println("err marshalling plan: ", err)
+				os.Exit(1)
 			}
 		}
 		fmt.Print(string(out))
@@ -84,7 +86,7 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	rootCmd.AddCommand(genCmd)
+	rootCmd.AddCommand(planCmd)
 
 	// Here you will define your flags and configuration settings.
 
@@ -94,5 +96,8 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	genCmd.Flags().BoolVarP(&outputAsPlan, "plan", "p", false, "output as plan - defaults to ouputting as questions")
+	planCmd.Flags().BoolVarP(&outputAsPlan, "plan", "p", false, "output as plan - defaults to ouputting as questions")
+	planCmd.Flags().IntSliceVarP(&intervals, "intervals", "i", nil, "comma separated list of interval days for repeat - ex. 2,4,8,16")
+	planCmd.Flags().StringVarP(&startDate, "start", "s", time.Now().Format(plan.ISOLayout), "start date for plan")
+	planCmd.Flags().IntVarP(&questionsPerDay, "questions-per-day", "q", 3, "new questions per day")
 }
