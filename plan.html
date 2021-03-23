@@ -1,0 +1,8 @@
+<h1>{{.StartDate}}</h1>
+<ul>
+    {{range .Questions}}
+        <li class="done">
+            <a href="{{.Link}}">{{.Title}}</a> - {{.Difficulty}} 
+        </li>
+    {{end}}
+</ul>

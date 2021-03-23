@@ -64,8 +64,8 @@ to quickly create a Cobra application.`,
 			fmt.Println("err parsing time: ", err)
 			os.Exit(1)
 		}
-		plan := plan.New(intervals, startTime, questionsPerDay)
-		plan.Schedule(questions)
+		sp := plan.New(intervals, startTime, questionsPerDay)
+		sp.Schedule(questions)
 
 		var out []byte
 		if outputAsPlan {
@@ -75,7 +75,7 @@ to quickly create a Cobra application.`,
 			// 	panic(err)
 			// }
 		} else {
-			out, err = json.Marshal(plan)
+			out, err = json.Marshal([]*plan.StudyPlan{sp})
 			if err != nil {
 				fmt.Println("err marshalling plan: ", err)
 				os.Exit(1)
@@ -97,7 +97,7 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	planCmd.Flags().BoolVarP(&outputAsPlan, "plan", "p", false, "output as plan - defaults to ouputting as questions")
-	planCmd.Flags().IntSliceVarP(&intervals, "intervals", "i", nil, "comma separated list of interval days for repeat - ex. 2,4,8,16")
+	planCmd.Flags().IntSliceVarP(&intervals, "intervals", "i", []int{2,4,8,16}, "comma separated list of interval days for repeat - ex. 2,4,8,16")
 	planCmd.Flags().StringVarP(&startDate, "start", "s", time.Now().Format(plan.ISOLayout), "start date for plan")
 	planCmd.Flags().IntVarP(&questionsPerDay, "questions-per-day", "q", 3, "new questions per day")
 }
