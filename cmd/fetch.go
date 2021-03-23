@@ -17,20 +17,19 @@ package cmd
 
 import (
 	"fmt"
-	"encoding/json"
-	"time"
-	"encoding/csv"
 	"os"
-	"io"
+	"bufio"
+	"encoding/json"
+
 	"github.com/spf13/cobra"
 	"github.com/stevequadros/studyplan/plan"
 )
 
-var outputAsPlan bool
+var limit = -1
 
-// genCmd represents the gen command
-var genCmd = &cobra.Command{
-	Use:   "gen",
+// fetchCmd represents the fetch command
+var fetchCmd = &cobra.Command{
+	Use:   "fetch",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -39,59 +38,47 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var intervals = []int{2,4,8,16}
-		var startDate = time.Now()
-		var questionsPerDay = 3
-
-		c := csv.NewReader(os.Stdin)
-		// skip header
-		_, err := c.Read()
-		if err != nil {
-			panic(err)
+		scanner := bufio.NewScanner(os.Stdin)
+		var questionNames []string
+		var count int
+		for scanner.Scan() {
+			if limit != -1 && count >= limit {
+				break
+			}
+			count++
+			name := scanner.Text()
+			questionNames = append(questionNames, name)
 		}
 		
-		var allQuestions []*plan.Question
-		for line, err := c.Read(); err != io.EOF; line, err = c.Read() {
-			if err != nil {
-				panic(err)
-			}
-			allQuestions = append(allQuestions, &plan.Question{Title: line[0], Link: line[1], Difficulty: line[2]})
+		if err := scanner.Err(); err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
 		}
 
-		if len(allQuestions) < 1 {
-			fmt.Println("no questions to schedule")
-			return
+		questions, err := plan.Fetch(questionNames)
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
 		}
-
-		questions := plan.GenerateDates(allQuestions, intervals, startDate, questionsPerDay)
-		var out []byte
-		if outputAsPlan {
-			plans := plan.ByDate(questions)
-			out, err = json.Marshal(plans)
-			if err != nil {
-				panic(err)
-			}
-			
-		} else {
-			out, err = json.Marshal(questions)
-			if err != nil {
-				panic(err)
-			}
+		out, err := json.Marshal(questions)
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
 		}
-		fmt.Print(string(out))
+		fmt.Println(string(out))
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(genCmd)
+	rootCmd.AddCommand(fetchCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// genCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// fetchCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	genCmd.Flags().BoolVarP(&outputAsPlan, "plan", "p", false, "output as plan - defaults to ouputting as questions")
+	fetchCmd.Flags().IntVarP(&limit, "limit", "l", -1, "limit number of fetches, defaults to -1 (no limit)")
 }

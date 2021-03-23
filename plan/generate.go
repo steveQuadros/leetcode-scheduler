@@ -7,17 +7,13 @@ import (
 
 type Question struct {
 	Link, Title, Difficulty string
-	InitialDate time.Time
+	InitialDate *time.Time
 	ReviewDates []time.Time
 }
 
 type Plan struct {
 	Date string
 	Completed bool
-	Questions
-}
-
-type Questions struct {
 	New []*Question
 	Review []*Question
 }
@@ -42,19 +38,23 @@ func GenerateDates(questions []*Question, intervals []int, startDate time.Time, 
 			count = 0
 		}
 		count++
-		question.InitialDate = curDate
-
-		for _, interval := range intervals {
-			question.ReviewDates = append(question.ReviewDates, curDate.AddDate(0, 0, interval-1))
-		}
+		datesForQuestion(question, curDate, intervals)
 	}
 	return questions	
+}
+
+func datesForQuestion(question *Question, initialDate time.Time, intervals []int) {
+	question.InitialDate = &initialDate
+	question.ReviewDates = []time.Time{} // reset
+	for _, interval := range intervals {
+		question.ReviewDates = append(question.ReviewDates, initialDate.AddDate(0, 0, interval-1))
+	}
 }
 
 func ByDate(questions []*Question) []*Plan {
 	var schedule = map[string]*Plan{}
 	for _, q := range questions {
-		dateKey := formatTime(q.InitialDate)
+		dateKey := formatTime(*q.InitialDate)
 		_, ok := schedule[dateKey]
 		if !ok {
 			schedule[dateKey] = &Plan{Date: dateKey}
