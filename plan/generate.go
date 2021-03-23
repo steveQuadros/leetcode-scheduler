@@ -1,13 +1,8 @@
-package generate
+package plan
 
 import (
-	"fmt"
-	"encoding/csv"
-	"os"
-	"io"
 	"time"
 	"sort"
-	"encoding/json"
 )
 
 
@@ -22,8 +17,8 @@ type Plan struct {
 }
 
 type Questions struct {
-	New []Question
-	Review []Question
+	New []*Question
+	Review []*Question
 }
 
 var Difficulty = map[string]int{
@@ -32,36 +27,19 @@ var Difficulty = map[string]int{
 	"Hard": 3,
 }
 
-func Generate(intervals []int, startDate time.Time, questionsPerDay int) {
-	c := csv.NewReader(os.Stdin)
-	// skip header
-	_, err := c.Read()
-	if err != nil {
-		panic(err)
-	}
-	
-	var allQuestions []Question
-	for line, err := c.Read(); err != io.EOF; line, err = c.Read() {
-		if err != nil {
-			panic(err)
-		}
-		allQuestions = append(allQuestions, Question{Title: line[0], Link: line[1], Difficulty: line[2]})
-	}
-
-	if len(allQuestions) < 1 {
-		fmt.Println("no questions to schedule")
-		return
-	}
-
+// Generate takes in a csv of question slugs (titles), the link, and difficult
+// sorts them by difficult, and then adds them to a series of dates
+// specified by intervals
+func Generate(questions []*Question, intervals []int, startDate time.Time, questionsPerDay int) []*Plan {
 	// sort by difficult
-	sort.Slice(allQuestions, func(i,j int) bool { 
-		return Difficulty[allQuestions[i].Difficulty] < Difficulty[allQuestions[j].Difficulty]
+	sort.Slice(questions, func(i,j int) bool { 
+		return Difficulty[questions[i].Difficulty] < Difficulty[questions[j].Difficulty]
 	})
 
 	var schedule = map[string]*Plan{}
 	var curQuestions = 0
 	var curDate = startDate
-	for _, q := range allQuestions {
+	for _, q := range questions {
 		if curQuestions > questionsPerDay-1 {
 			curDate = curDate.AddDate(0,0,1)
 			curQuestions = 0
@@ -100,11 +78,7 @@ func Generate(intervals []int, startDate time.Time, questionsPerDay int) {
 		plans = append(plans, schedule[d])
 	}
 
-	out, err := json.MarshalIndent(plans, "", "\t")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Print(string(out))
+	return plans
 }
 
 func formatTime(t time.Time) string {

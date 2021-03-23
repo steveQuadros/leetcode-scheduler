@@ -16,10 +16,14 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
+	"encoding/json"
 	"time"
-
+	"encoding/csv"
+	"os"
+	"io"
 	"github.com/spf13/cobra"
-	"github.com/stevequadros/studyplan/generate"
+	"github.com/stevequadros/studyplan/plan"
 )
 
 // genCmd represents the gen command
@@ -36,7 +40,33 @@ to quickly create a Cobra application.`,
 		var intervals = []int{2,4,8,16}
 		var startDate = time.Now()
 		var questionsPerDay = 3
-		generate.Generate(intervals, startDate, questionsPerDay)
+
+		c := csv.NewReader(os.Stdin)
+		// skip header
+		_, err := c.Read()
+		if err != nil {
+			panic(err)
+		}
+		
+		var allQuestions []*plan.Question
+		for line, err := c.Read(); err != io.EOF; line, err = c.Read() {
+			if err != nil {
+				panic(err)
+			}
+			allQuestions = append(allQuestions, &plan.Question{Title: line[0], Link: line[1], Difficulty: line[2]})
+		}
+
+		if len(allQuestions) < 1 {
+			fmt.Println("no questions to schedule")
+			return
+		}
+
+		plans := plan.Generate(allQuestions, intervals, startDate, questionsPerDay)
+		out, err := json.MarshalIndent(plans, "", "\t")
+		if err != nil {
+			panic(err)
+		}
+		fmt.Print(string(out))
 	},
 }
 
