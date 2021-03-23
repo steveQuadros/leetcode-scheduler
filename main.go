@@ -114,12 +114,12 @@ func main() {
 
 		fmt.Fprintln(details, "New: ", len(new))
 		for _, q := range new {
-			fmt.Fprintln(details, q.Title, " - ", q.Difficulty)
+			fmt.Fprintln(details, q.Title, " - ", q.Difficulty, " - ", q.Link)
 		}
 
 		fmt.Fprintln(details, "Review: ", len(review))
 		for _, q := range review {
-			fmt.Fprintln(details, q.Title, " - ", q.Difficulty)
+			fmt.Fprintln(details, q.Title, " - ", q.Difficulty, " - ", q.Link)
 		}
 		fmt.Fprintln(details)
 	}
