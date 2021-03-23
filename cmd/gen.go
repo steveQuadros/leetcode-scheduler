@@ -61,11 +61,13 @@ to quickly create a Cobra application.`,
 			return
 		}
 
-		plans := plan.Generate(allQuestions, intervals, startDate, questionsPerDay)
+		questions := plan.GenerateDates(allQuestions, intervals, startDate, questionsPerDay)
+		plans := plan.ByDate(questions)
 		out, err := json.MarshalIndent(plans, "", "\t")
 		if err != nil {
 			panic(err)
 		}
+		
 		fmt.Print(string(out))
 	},
 }

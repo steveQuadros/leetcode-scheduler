@@ -5,9 +5,10 @@ import (
 	"sort"
 )
 
-
 type Question struct {
 	Link, Title, Difficulty string
+	InitialDate time.Time
+	ReviewDates []time.Time
 }
 
 type Plan struct {
@@ -27,43 +28,48 @@ var Difficulty = map[string]int{
 	"Hard": 3,
 }
 
-// Generate takes in a csv of question slugs (titles), the link, and difficult
-// sorts them by difficult, and then adds them to a series of dates
-// specified by intervals
-func Generate(questions []*Question, intervals []int, startDate time.Time, questionsPerDay int) []*Plan {
+func GenerateDates(questions []*Question, intervals []int, startDate time.Time, questionsPerDay int) []*Question {
 	// sort by difficult
 	sort.Slice(questions, func(i,j int) bool { 
 		return Difficulty[questions[i].Difficulty] < Difficulty[questions[j].Difficulty]
 	})
 
-	var schedule = map[string]*Plan{}
-	var curQuestions = 0
+	var count int
 	var curDate = startDate
-	for _, q := range questions {
-		if curQuestions > questionsPerDay-1 {
+	for _, question := range questions {
+		if count >= questionsPerDay {
 			curDate = curDate.AddDate(0,0,1)
-			curQuestions = 0
+			count = 0
 		}
-		curQuestions++
+		count++
+		question.InitialDate = curDate
 
-		dateKey := formatTime(curDate)
+		for _, interval := range intervals {
+			question.ReviewDates = append(question.ReviewDates, curDate.AddDate(0, 0, interval-1))
+		}
+	}
+	return questions	
+}
+
+func ByDate(questions []*Question) []*Plan {
+	var schedule = map[string]*Plan{}
+	for _, q := range questions {
+		dateKey := formatTime(q.InitialDate)
 		_, ok := schedule[dateKey]
 		if !ok {
 			schedule[dateKey] = &Plan{Date: dateKey}
 		}
-		questions := schedule[dateKey]
-		questions.New = append(questions.New, q)
+		plan := schedule[dateKey]
+		plan.New = append(plan.New, q)
 
-		// for each interval add interval to innerDate and add question to map[innerdate]
-		for _, i := range intervals {
-			tempDate := curDate.AddDate(0,0,i-1)
-			dateKey := formatTime(tempDate)
+		for _, d := range q.ReviewDates {
+			dateKey := formatTime(d)
 			_, ok := schedule[dateKey]
 			if !ok {
 				schedule[dateKey] = &Plan{Date: dateKey}
 			}
-			questions := schedule[dateKey]
-			questions.Review = append(questions.Review, q)
+			plan := schedule[dateKey]
+			plan.Review = append(plan.Review, q)
 		}
 	}
 	
