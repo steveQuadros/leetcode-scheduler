@@ -5,10 +5,44 @@ import (
 	"sort"
 )
 
-type Question struct {
-	Link, Title, Difficulty string
-	InitialDate *time.Time
-	ReviewDates []time.Time
+type StudyPlan struct {
+	StartDate time.Time
+	QuestionsPerDay int
+	Intervals []int
+	Questions []*Question
+}
+
+func New(intervals []int, startDate time.Time, questionsPerDay int) *StudyPlan {
+	return &StudyPlan{
+		Intervals: intervals,
+		QuestionsPerDay: questionsPerDay,
+		StartDate: startDate,
+	}
+}
+
+func (sp *StudyPlan) Schedule(questions []*Question) []*Question {
+	// sort by difficult
+	var Difficulty = map[string]int{
+		"Easy": 1,
+		"Medium": 2,
+		"Hard": 3,
+	}
+
+	sort.Slice(questions, func(i,j int) bool { 
+		return Difficulty[questions[i].Difficulty] < Difficulty[questions[j].Difficulty]
+	})
+
+	var count int
+	var curDate = sp.StartDate
+	for _, question := range questions {
+		if count >= sp.QuestionsPerDay {
+			curDate = curDate.AddDate(0,0,1)
+			count = 0
+		}
+		count++
+		question.Schedule(curDate, sp.Intervals)
+	}
+	return questions	
 }
 
 type Plan struct {
@@ -16,39 +50,6 @@ type Plan struct {
 	Completed bool
 	New []*Question
 	Review []*Question
-}
-
-var Difficulty = map[string]int{
-	"Easy": 1,
-	"Medium": 2,
-	"Hard": 3,
-}
-
-func GenerateDates(questions []*Question, intervals []int, startDate time.Time, questionsPerDay int) []*Question {
-	// sort by difficult
-	sort.Slice(questions, func(i,j int) bool { 
-		return Difficulty[questions[i].Difficulty] < Difficulty[questions[j].Difficulty]
-	})
-
-	var count int
-	var curDate = startDate
-	for _, question := range questions {
-		if count >= questionsPerDay {
-			curDate = curDate.AddDate(0,0,1)
-			count = 0
-		}
-		count++
-		datesForQuestion(question, curDate, intervals)
-	}
-	return questions	
-}
-
-func datesForQuestion(question *Question, initialDate time.Time, intervals []int) {
-	question.InitialDate = &initialDate
-	question.ReviewDates = []time.Time{} // reset
-	for _, interval := range intervals {
-		question.ReviewDates = append(question.ReviewDates, initialDate.AddDate(0, 0, interval-1))
-	}
 }
 
 func ByDate(questions []*Question) []*Plan {
@@ -62,8 +63,8 @@ func ByDate(questions []*Question) []*Plan {
 		plan := schedule[dateKey]
 		plan.New = append(plan.New, q)
 
-		for _, d := range q.ReviewDates {
-			dateKey := formatTime(d)
+		for _, r := range q.Reviews {
+			dateKey := formatTime(r.Date)
 			_, ok := schedule[dateKey]
 			if !ok {
 				schedule[dateKey] = &Plan{Date: dateKey}

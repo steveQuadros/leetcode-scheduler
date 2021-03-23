@@ -50,30 +50,31 @@ to quickly create a Cobra application.`,
 			panic(err)
 		}
 		
-		var allQuestions []*plan.Question
+		var questions []*plan.Question
 		for line, err := c.Read(); err != io.EOF; line, err = c.Read() {
 			if err != nil {
 				panic(err)
 			}
-			allQuestions = append(allQuestions, &plan.Question{Title: line[0], Link: line[1], Difficulty: line[2]})
+			questions = append(questions, &plan.Question{Title: line[0], Link: line[1], Difficulty: line[2]})
 		}
 
-		if len(allQuestions) < 1 {
+		if len(questions) < 1 {
 			fmt.Println("no questions to schedule")
 			return
 		}
 
-		questions := plan.GenerateDates(allQuestions, intervals, startDate, questionsPerDay)
+		plan := plan.New(intervals, startDate, questionsPerDay)
+		plan.Schedule(questions)
 		var out []byte
 		if outputAsPlan {
-			plans := plan.ByDate(questions)
-			out, err = json.Marshal(plans)
-			if err != nil {
-				panic(err)
-			}
+			// plans := plan.ByDate(plan.questions)
+			// out, err = json.Marshal(plans)
+			// if err != nil {
+			// 	panic(err)
+			// }
 			
 		} else {
-			out, err = json.Marshal(questions)
+			out, err = json.Marshal(plan.Questions)
 			if err != nil {
 				panic(err)
 			}
